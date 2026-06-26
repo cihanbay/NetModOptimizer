@@ -1,0 +1,94 @@
+name: Build APK
+
+# Online builds — no local JDK / Android SDK / signing tools needed.
+# Push this repo to GitHub (or use "Run workflow") and download the APK from the
+# run's Artifacts. A debug APK is installable for testing as-is; a signed release
+# APK is produced too if you add the keystore secrets (see bottom of this file).
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Ensure xray AAR is present
+        run: |
+          mkdir -p app/libs
+          if [ ! -f app/libs/libv2ray.aar ]; then
+            echo "libv2ray.aar missing — downloading v26.6.22…"
+            curl -fL -o app/libs/libv2ray.aar \
+              https://github.com/2dust/AndroidLibXrayLite/releases/download/v26.6.22/libv2ray.aar
+          fi
+          ls -la app/libs
+
+      - name: Build debug APK (installable test build)
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetModOptimizer-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      # ── Signed release APK (only runs if you add the secrets below) ──────────
+      - name: Decode keystore
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+
+      - name: Build & sign release APK
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          gradle --no-daemon assembleRelease
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          SIGNED=app/build/outputs/apk/release/app-release-signed.apk
+          if [ -f "$UNSIGNED" ]; then
+            "$ANDROID_SDK_ROOT"/build-tools/34.0.0/zipalign -p 4 "$UNSIGNED" aligned.apk
+            "$ANDROID_SDK_ROOT"/build-tools/34.0.0/apksigner sign \
+              --ks release.jks --ks-pass env:STORE_PASSWORD \
+              --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
+              --out "$SIGNED" aligned.apk
+          fi
+
+      - name: Upload signed release APK
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetModOptimizer-release-signed-apk
+          path: app/build/outputs/apk/release/app-release-signed.apk
+
+# To get a SIGNED release APK, add these repo secrets
+# (Settings → Secrets and variables → Actions):
+#   KEYSTORE_BASE64  = base64 of your .jks  ->  base64 -w0 my.jks
+#   STORE_PASSWORD   = keystore password
+#   KEY_ALIAS        = key alias
+#   KEY_PASSWORD     = key password
+# Create a keystore once with:
+#   keytool -genkeypair -v -keystore my.jks -keyalg RSA -keysize 2048 \
+#     -validity 10000 -alias netmod

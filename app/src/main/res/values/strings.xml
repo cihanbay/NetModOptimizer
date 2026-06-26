@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NetMod Optimizer</string>
+    <string name="vpn_channel">VPN Tunnel</string>
+    <string name="vpn_running">VLESS tunnel active</string>
+</resources>
