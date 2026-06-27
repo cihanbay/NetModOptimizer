@@ -173,9 +173,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         log("[Phase 1] TCP pre-filter on ${tasks.size} targets")
 
         for (chunk in chunks) {
-            val batch = chunk.map { (ip, port) ->
-                async { phase1Opt.probe(ip, port, "tcp", sni, host, path) }
-            }.awaitAll()
+            val batch = coroutineScope {
+                chunk.map { (ip, port) ->
+                    async { phase1Opt.probe(ip, port, "tcp", sni, host, path) }
+                }.awaitAll()
+            }
             batch.filter { it.ok }.forEach { collected.add(it) }
             done += chunk.size
             scanProgress = done.toFloat() / tasks.size * 0.33f
@@ -202,9 +204,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         done = 0
         val chunks2 = collected.chunked(20)
         for (chunk in chunks2) {
-            val batch = chunk.map { r ->
-                async { phase2Opt.probe(r.ip, r.port, phase2Mode, sni, host, path) }
-            }.awaitAll()
+            val batch = coroutineScope {
+                chunk.map { r ->
+                    async { phase2Opt.probe(r.ip, r.port, phase2Mode, sni, host, path) }
+                }.awaitAll()
+            }
             batch.filter { it.ok }.forEach { verified.add(it) }
             done += chunk.size
             scanProgress = 0.33f + done.toFloat() / collected.size * 0.33f
@@ -267,9 +271,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val chunks = tasks.chunked(profile.threads.coerceAtLeast(1))
         val collected = ArrayList<ProbeResult>()
         for (chunk in chunks) {
-            val batch = chunk.map { (ip, port) ->
-                async { opt.probe(ip, port, mode, profile.sni, profile.host, profile.path) }
-            }.awaitAll()
+            val batch = coroutineScope {
+                chunk.map { (ip, port) ->
+                    async { opt.probe(ip, port, mode, profile.sni, profile.host, profile.path) }
+                }.awaitAll()
+            }
             batch.filter { it.ok }.forEach { collected.add(it) }
             done += chunk.size
             scanProgress = done.toFloat() / tasks.size
@@ -405,7 +411,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }.awaitAll()
             }
-            if (isActive.not()) return@launch
+            if (!coroutineContext.isActive) return@launch
 
             // ── Phase B: Sequential bandwidth on winners ─────────────────────
             if (useXray) {
@@ -416,7 +422,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     testStatus = "Bandwidth on top ${winners.size}…"
 
                     for ((idx, r) in winners.withIndex()) {
-                        if (isActive.not()) break
+                        if (!coroutineContext.isActive) break
                         val socksPort = 10830 + idx
                         val cfg = XrayConfig.buildProxy(r.ip, r.port, profile, socks = socksPort)
 
