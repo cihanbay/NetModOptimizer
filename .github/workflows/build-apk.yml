@@ -47,7 +47,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: NetModOptimizer-debug-apk
+          name: VEO-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
       # ── Signed release APK (only runs if you add the secrets below) ──────────
@@ -80,7 +80,7 @@ jobs:
         if: ${{ env.KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: NetModOptimizer-release-signed-apk
+          name: VEO-release-signed-apk
           path: app/build/outputs/apk/release/app-release-signed.apk
 
 # To get a SIGNED release APK, add these repo secrets

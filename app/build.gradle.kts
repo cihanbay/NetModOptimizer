@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.netmod.optimizer"
+    namespace = "com.veo.optimizer"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.netmod.optimizer"
+        applicationId = "com.veo.optimizer"
         minSdk = 24            // Android 7.0 — VpnService + modern TLS
         targetSdk = 34
         versionCode = 5

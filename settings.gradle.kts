@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NetModOptimizer"
+rootProject.name = "VEOOptimizer"
 include(":app")
