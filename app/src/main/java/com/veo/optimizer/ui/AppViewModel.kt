@@ -411,8 +411,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }.awaitAll()
             }
-            if (!coroutineContext.isActive) return@launch
-
+            if (testJob?.isCancelled != true) {
             // ── Phase B: Sequential bandwidth on winners ─────────────────────
             if (useXray) {
                 val winners = tgts.filter { it.latMs != null }
@@ -422,7 +421,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     testStatus = "Bandwidth on top ${winners.size}…"
 
                     for ((idx, r) in winners.withIndex()) {
-                        if (!coroutineContext.isActive) break
+                        if (testJob?.isCancelled == true) break
                         val socksPort = 10830 + idx
                         val cfg = XrayConfig.buildProxy(r.ip, r.port, profile, socks = socksPort)
 
@@ -444,6 +443,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
+            } // end Phase B check
 
             // Re-sort: proxy-verified first, then by ping
             val alive = results.filter { it.pingMs != null }.sortedWith(
