@@ -13,8 +13,8 @@ android {
         applicationId = "com.veo.optimizer"
         minSdk = 24            // Android 7.0 — VpnService + modern TLS
         targetSdk = 34
-        versionCode = 5
-        versionName = "4.5-android"
+        versionCode = 6
+        versionName = "4.5.1-android"
         vectorDrawables { useSupportLibrary = true }
     }
 

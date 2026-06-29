@@ -7,9 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -17,17 +14,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.FilterChip
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.veo.optimizer.ui.AppViewModel
 import com.veo.optimizer.ui.Dest
@@ -43,7 +34,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppRoot() {
     val vm: AppViewModel = viewModel()
@@ -56,18 +46,6 @@ fun AppRoot() {
             TopAppBar(
                 title = { Text(dest.label, color = p.fg1) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = p.bgHeader),
-                actions = {
-                    // Secondary tabs as compact scrollable chips
-                    Row(Modifier.horizontalScroll(rememberScrollState()).padding(end = 8.dp)) {
-                        listOf(Dest.CONFIG, Dest.TEST, Dest.CFWORKER, Dest.FAVORITES, Dest.HISTORY).forEach { d ->
-                            FilterChip(
-                                selected = dest == d, onClick = { dest = d },
-                                label = { Text(d.label, fontSize = androidx.compose.ui.unit.TextUnit.Unspecified) },
-                                modifier = Modifier.padding(horizontal = 2.dp),
-                            )
-                        }
-                    }
-                },
             )
         },
         bottomBar = {
@@ -86,14 +64,9 @@ fun AppRoot() {
         Box(Modifier.fillMaxSize().padding(inner)) {
             when (dest) {
                 Dest.HOME -> HomeScreen(vm)
-                Dest.CONFIG -> ConfigScreen(vm)
+                Dest.WIZARD -> WizardScreen(vm)
                 Dest.SCAN -> ScanScreen(vm)
-                Dest.TEST -> TestScreen(vm)
                 Dest.CONNECT -> ConnectScreen(vm)
-                Dest.BPB -> BpbScreen(vm)
-                Dest.CFWORKER -> CfWorkerScreen(vm)
-                Dest.FAVORITES -> FavoritesScreen(vm)
-                Dest.HISTORY -> HistoryScreen(vm)
                 Dest.SETTINGS -> SettingsScreen(vm)
             }
         }

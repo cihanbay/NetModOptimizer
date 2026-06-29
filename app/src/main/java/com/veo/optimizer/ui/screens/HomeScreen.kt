@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -45,53 +45,99 @@ fun HomeScreen(vm: AppViewModel) {
     val bestPing = sorted.minByOrNull { it.pingMs ?: Double.MAX_VALUE }?.pingMs
     val bestDl = sorted.mapNotNull { it.dlMbps }.maxOrNull()
     val poolN = vm.results.size
+    val tested = sorted.count { it.tested }
+    val builtN = poolN
 
     LazyColumn(
-        Modifier.fillMaxWidth().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // ── Header with quick actions ──
+        // ── Profile card ──
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("VEO", color = p.fg1, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    val cfg = if (vm.profile.hasConfig) "Ready" else "No config"
-                    Text("${vm.profile.name} · $cfg", color = p.fg3, fontSize = 12.sp)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PillButton("Scan", p.accent) { /* navigate to scan */ }
-                    val connLabel = when (vm.connState) {
-                        ConnState.CONNECTED -> "Disconnect"
-                        ConnState.CONNECTING -> "Connecting…"
-                        else -> "Connect"
-                    }
-                    PillButton(connLabel,
-                        if (vm.connState == ConnState.CONNECTED) p.redC else p.teal
-                    ) {
-                        if (vm.connState == ConnState.CONNECTED) vm.disconnect()
-                        else vm.connectAutoBest()
+            SectionCard(Modifier.padding(0.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(vm.profile.name, color = p.fg1, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            val cfgOk = vm.profile.hasConfig
+                            Text(
+                                if (cfgOk) "✔ Config" else "⚠ No config",
+                                color = if (cfgOk) p.green else p.orange,
+                                fontSize = 11.sp,
+                            )
+                        }
+                        if (vm.profile.scanTime.isNotEmpty()) {
+                            Text("Last scan: ${vm.profile.scanTime}  ·  ${vm.profile.rangeName}", color = p.fg3, fontSize = 11.sp)
+                        }
                     }
                 }
             }
         }
 
-        // ── Compact stat row ──
+        // ── Stat boxes ──
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricBox("Pool", "$poolN", p.blue, Modifier.weight(1f), "")
-                MetricBox("Best", Fmt.pingLabel(bestPing), Fmt.pingColor(bestPing, p), Modifier.weight(1f), "⚡")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MetricBox("Scanned", "${vm.profile.scanned}", p.blue, Modifier.weight(1f), "")
+                MetricBox("Pool", "$poolN", p.teal, Modifier.weight(1f), "")
+                MetricBox("Best", Fmt.pingLabel(bestPing), Fmt.pingColor(bestPing, p), Modifier.weight(1f), "")
                 MetricBox("DL", if (bestDl != null) "%.0fM".format(bestDl) else "—",
-                    Fmt.speedColor(bestDl, p), Modifier.weight(1f), "↓")
-                val tunStatus = when (vm.connState) {
-                    ConnState.CONNECTED -> "ON"; ConnState.CONNECTING -> "…"; else -> "OFF"
-                }
-                MetricBox("VPN", tunStatus,
-                    p.connected.takeIf { vm.connState == ConnState.CONNECTED } ?: p.fg3,
-                    Modifier.weight(1f), "")
+                    Fmt.speedColor(bestDl, p), Modifier.weight(1f), "")
+                MetricBox("Tested", "$tested", p.orange, Modifier.weight(1f), "")
             }
         }
 
-        // ── Share toolbar ──
+        // ── VPN status + quick actions ──
+        item {
+            SectionCard(Modifier.padding(0.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val tunStatus = when (vm.connState) {
+                        ConnState.CONNECTED -> "Connected"
+                        ConnState.CONNECTING -> "Connecting…"
+                        else -> "Disconnected"
+                    }
+                    val tunColor = when (vm.connState) {
+                        ConnState.CONNECTED -> p.green
+                        ConnState.CONNECTING -> p.orange
+                        else -> p.fg3
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.padding(0.dp).clip(RoundedCornerShape(4.dp)).background(tunColor).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                            Text(tunStatus, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                        if (vm.connectedIp.isNotEmpty()) Text(vm.connectedIp, color = p.fg3, fontSize = 11.sp)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val connLabel = when (vm.connState) {
+                            ConnState.CONNECTED -> "Disconnect"
+                            ConnState.CONNECTING -> "Connecting…"
+                            else -> "Connect"
+                        }
+                        PillButton(connLabel,
+                            if (vm.connState == ConnState.CONNECTED) p.redC else p.teal
+                        ) {
+                            if (vm.connState == ConnState.CONNECTED) vm.disconnect()
+                            else vm.connectAutoBest()
+                        }
+                    }
+                }
+                if (vm.connState == ConnState.CONNECTED) {
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Chip("↓ ${Fmt.speed(vm.dlBps)}", p.green)
+                        Chip("↑ ${Fmt.speed(vm.upBps)}", p.blue)
+                    }
+                }
+            }
+        }
+
+        // ── Top-5 toolbar ──
         item {
             SectionCard(Modifier.padding(0.dp)) {
                 Row(
@@ -99,6 +145,7 @@ fun HomeScreen(vm: AppViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Text("Top 5:", color = p.fg2, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     PillButton("Sub Link", p.blue) { vm.shareHomeSubLink() }
                     PillButton("File", p.teal) { vm.shareHomeSubFile() }
                     PillButton("TXT", p.fg3) { vm.shareHomeTxt() }
@@ -109,11 +156,11 @@ fun HomeScreen(vm: AppViewModel) {
         }
 
         if (top5.isEmpty()) {
-            item { Text("No results — run a scan first.", color = p.fg3, fontSize = 13.sp) }
+            item { Text("No results — run a scan first.", color = p.fg3, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
         }
 
-        // ── Top-5 config cards (compact) ──
-        items(top5) { r ->
+        // ── Top-5 config cards ──
+        itemsIndexed(top5) { idx, r ->
             SectionCard(Modifier.padding(0.dp)) {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -121,15 +168,23 @@ fun HomeScreen(vm: AppViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("${r.ip}:${r.port}", color = p.fg1, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Chip(Fmt.pingLabel(r.pingMs), Fmt.pingColor(r.pingMs, p))
-                            if (r.dlMbps != null) Chip("%.0fM".format(r.dlMbps), Fmt.speedColor(r.dlMbps, p))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("${idx + 1}.", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("${r.ip}:${r.port}", color = p.fg1, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             if (r.cfValid) Chip("CF", p.blue)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 2.dp)) {
+                            Chip(Fmt.pingLabel(r.pingMs), Fmt.pingColor(r.pingMs, p))
+                            if (r.tcpMs != null) Chip("tcp ${r.tcpMs!!.toInt()}ms", Fmt.pingColor(r.tcpMs, p))
+                            if (r.icmpMs != null) Chip("icmp ${r.icmpMs!!.toInt()}ms", Fmt.pingColor(r.icmpMs, p))
+                            if (r.latMs != null) Chip("proxy ${r.latMs!!.toInt()}ms", p.green)
+                            if (r.dlMbps != null) Chip("↓${"%.1f".format(r.dlMbps)}M", Fmt.speedColor(r.dlMbps, p))
+                            if (r.upMbps != null) Chip("↑${"%.1f".format(r.upMbps)}M", Fmt.speedColor(r.upMbps, p))
                             r.lossPct?.let { if (it > 0) Chip("${it.toInt()}% loss", p.orange) }
+                            r.jitterMs?.let { if (it > 0) Chip("jit ${it.toInt()}ms", Fmt.jitterColor(it, p)) }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         PillButton("→", p.accent) { vm.connect(r) }
                         PillButton("QR", p.teal) { qrText = vm.shareLink(r) }
                         PillButton("★", p.orange) {
@@ -142,7 +197,6 @@ fun HomeScreen(vm: AppViewModel) {
     }
 }
 
-/** Small filled pill button matching the app palette. */
 @Composable
 private fun PillButton(label: String, color: Color, onClick: () -> Unit) {
     Box(
@@ -157,7 +211,6 @@ private fun PillButton(label: String, color: Color, onClick: () -> Unit) {
     }
 }
 
-/** Sort selector for the Home top-5 (Quality / Ping / DL / Jitter / Loss). */
 @Composable
 private fun SortDropdown(vm: AppViewModel) {
     val p = Theme.palette

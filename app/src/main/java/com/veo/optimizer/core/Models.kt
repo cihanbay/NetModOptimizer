@@ -56,8 +56,10 @@ data class ConfigProfile(
     var scanHistory: MutableList<HistoryEntry> = mutableListOf(),
     var favorites: MutableList<Favorite> = mutableListOf(),
     var cfWorkers: MutableList<CfWorker> = mutableListOf(),
+    var rangeTags: MutableList<String> = mutableListOf(),
 ) {
     val hasConfig: Boolean get() = uid.trim().isNotEmpty() && host.trim().isNotEmpty()
+    val effectiveRange: String get() = if (rangeTags.isNotEmpty()) rangeTags.joinToString(",") else rangeRaw
 }
 
 @Serializable

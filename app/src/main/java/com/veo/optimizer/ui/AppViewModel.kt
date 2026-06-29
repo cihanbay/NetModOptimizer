@@ -78,6 +78,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var dlBps by mutableStateOf(0.0); private set
     var upBps by mutableStateOf(0.0); private set
 
+    var wizardTab by mutableStateOf(0)
+
     private var scanJob: Job? = null
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -133,7 +135,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ── SCANNING ────────────────────────────────────────────────────────────
     fun startScan() {
         if (scanning) return
-        val ips = Optimizer.fixRange(profile.rangeRaw)
+        val rangeStr = profile.effectiveRange
+        if (rangeStr.isBlank()) { log("No IP range — add a range tag or enter a range"); return }
+        val ips = Optimizer.fixRange(rangeStr)
         if (ips.isEmpty()) { log("No valid IPs in range"); return }
         scanning = true; scanProgress = 0f; scanStatus = "Scanning ${ips.size} IPs…"
         results.clear()
@@ -292,9 +296,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun saveHistory(res: List<ProbeResult>) {
         if (res.isEmpty()) return
+        val rangeLabel = if (profile.rangeTags.isNotEmpty()) profile.rangeTags.take(2).joinToString(",") + if (profile.rangeTags.size > 2) " +${profile.rangeTags.size - 2}" else "" else profile.rangeName
         profile.scanHistory.add(0, HistoryEntry(
-            name = "${profile.rangeName} @ ${now()}", time = now(),
-            scanned = profile.scanned, rangeName = profile.rangeName,
+            name = "$rangeLabel @ ${now()}", time = now(),
+            scanned = profile.scanned, rangeName = rangeLabel,
             results = res.take(50).toMutableList(),
         ))
         if (profile.scanHistory.size > 30) profile.scanHistory.removeAt(profile.scanHistory.size - 1)
