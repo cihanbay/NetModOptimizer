@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -209,7 +210,7 @@ private fun ScanConfigTab(vm: AppViewModel) {
 }
 
 // ── Scan sub-tab (main scan controls + results) ─────────────────────────
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ScanMainTab(vm: AppViewModel) {
     val p = Theme.palette
